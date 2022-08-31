@@ -3,7 +3,49 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 
 
+class PostQuerySet(models.QuerySet):
+
+    def year(self, year):
+        posts_at_year = self.filter(
+            published_at__year=year
+        ).order_by('published_at')
+        return posts_at_year
+    
+    def popular(self):
+        return self.annotate(
+            likes_amount=models.Count('likes')
+        ).order_by('-likes_amount')
+    
+    def fetch_with_comments_count(self):
+        """Снижает нагрузку запросами на БД, если нужно не только
+        упорядочивать посты по лайкам, но и посчитать количество
+        комментариев в них"""
+        most_popular_posts = list(self)
+        most_popular_posts_ids = [post.id for post in most_popular_posts]
+        posts_with_comments = Post.objects.filter(
+            id__in=most_popular_posts_ids
+        ).annotate(comments_amount=models.Count('comments'))
+
+        ids_and_comments = posts_with_comments.values_list('id', 'comments_amount')
+        count_for_id = dict(ids_and_comments)
+
+        for post in most_popular_posts:
+            post.comments_amount = count_for_id[post.id]
+        
+        return most_popular_posts
+
+
+class TagQuerySet(models.QuerySet):
+
+    def popular(self):
+        return self.annotate(
+            models.Count('posts')
+        ).order_by('-posts__count')
+
+
 class Post(models.Model):
+    objects = PostQuerySet.as_manager()
+
     title = models.CharField('Заголовок', max_length=200)
     text = models.TextField('Текст')
     slug = models.SlugField('Название в виде url', max_length=200)
@@ -38,6 +80,8 @@ class Post(models.Model):
 
 
 class Tag(models.Model):
+    objects = TagQuerySet.as_manager()
+
     title = models.CharField('Тег', max_length=20, unique=True)
 
     def __str__(self):
