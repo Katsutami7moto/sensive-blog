@@ -39,7 +39,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='comment',
             name='published_at',
-            field=models.DateTimeField(verbose_name='Дата и время публикации'),
+            field=models.DateTimeField(
+                verbose_name='Дата и время публикации'
+            ),
         ),
         migrations.AlterField(
             model_name='post',
@@ -64,7 +66,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='post',
             name='published_at',
-            field=models.DateTimeField(verbose_name='Дата и время публикации'),
+            field=models.DateTimeField(
+                verbose_name='Дата и время публикации'
+                ),
         ),
         migrations.AlterField(
             model_name='post',
