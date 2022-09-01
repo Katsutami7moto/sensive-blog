@@ -24,6 +24,14 @@ def serialize_tag(tag):
     }
 
 
+def serialize_comment(comment):
+    return {
+        'text': comment.text,
+        'published_at': comment.published_at,
+        'author': comment.author.username,
+    }
+
+
 def index(request):
     most_popular_posts = Post.objects.popular().prefetch_related(
         'author'
@@ -53,29 +61,24 @@ def index(request):
 
 def post_detail(request, slug):
     post = Post.objects.fetch_with_tags().get(slug=slug)
-    comments = Comment.objects.filter(post=post)
-    serialized_comments = []
-    for comment in comments:
-        serialized_comments.append({
-            'text': comment.text,
-            'published_at': comment.published_at,
-            'author': comment.author.username,
-        })
+    comments = Comment.objects.filter(post=post).prefetch_related('author')
+    serialized_comments = [serialize_comment(comment) for comment in comments]
 
     related_tags = post.tags.all().annotate(posts_amount=Count('posts'))
-
     serialized_post = {
-        'title': post.title, 'text': post.text,
-        'author': post.author.username, 'comments': serialized_comments,
+        'title': post.title, 
+        'text': post.text,
+        'author': post.author.username, 
+        'comments': serialized_comments,
         'likes_amount': post.likes.count(),
         'image_url': post.image.url if post.image else None,
-        'published_at': post.published_at, 'slug': post.slug,
+        'published_at': post.published_at, 
+        'slug': post.slug,
         'tags': [serialize_tag(tag) for tag in related_tags],
     }
 
     popular_tags = Tag.objects.popular().annotate(posts_amount=Count('posts'))
     most_popular_tags = list(popular_tags)[:5]
-
     most_popular_posts = Post.objects.popular().prefetch_related(
         'author'
     )[:5].fetch_with_tags().fetch_with_comments_count()
