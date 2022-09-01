@@ -33,14 +33,22 @@ class PostQuerySet(models.QuerySet):
             post.comments_amount = count_for_id[post.id]
         
         return most_popular_posts
+    
+    def fetch_with_tags(self):
+        fetched_tags = Tag.objects.annotate(
+            posts_amount=models.Count('posts')
+        )
+        return self.prefetch_related(
+            models.Prefetch('tags', queryset=fetched_tags)
+        )
 
 
 class TagQuerySet(models.QuerySet):
 
     def popular(self):
         return self.annotate(
-            models.Count('posts')
-        ).order_by('-posts__count')
+            posts_amount=models.Count('posts')
+        ).order_by('-posts_amount')
 
 
 class Post(models.Model):
